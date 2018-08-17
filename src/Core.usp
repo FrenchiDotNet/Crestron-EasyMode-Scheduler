@@ -1,0 +1,47 @@
+/*
+Dealer Name: Ask The Advisors
+Programmer: Ryan French
+*/
+
+#SYMBOL_NAME "EasyMode Scheduling Core"
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+#PRINT_TO_TRACE
+#USER_SIMPLSHARP_LIBRARY "EasyMode Scheduler"
+
+//=====// I/O //=====//
+
+STRING_PARAMETER FilePath[256];
+
+INTEGER_PARAMETER EnableDebug;
+
+#BEGIN_PARAMETER_PROPERTIES FilePath
+	PROPDEFAULTVALUE = "\\NVRAM\\EasyMode\\Scheduler\\";
+#END_PARAMETER_PROPERTIES
+
+#BEGIN_PARAMETER_PROPERTIES EnableDebug
+	PROPDEFAULTVALUE = 0d;
+	PROPLIST         = { 0d ,"False" }, { 1d, "True" }; 
+#END_PARAMETER_PROPERTIES
+
+
+
+//=====// VARIABLES //=====//
+
+//=====// FUNCTIONS //=====//
+
+//=====// EVENTS //=====//
+
+//=====// MAIN //=====//
+
+FUNCTION Main () {
+
+	WAITFORINITIALIZATIONCOMPLETE();
+
+	Scheduler.setTickTime(30000);
+	Scheduler.setFilePath(FilePath);
+	Scheduler.DebugEnabled = EnableDebug;
+
+}
+

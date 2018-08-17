@@ -1,0 +1,156 @@
+/*
+Dealer Name: Ask The Advisors
+Programmer: Ryan French
+*/
+
+#SYMBOL_NAME "EasyMode Schedule"
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+#PRINT_TO_TRACE
+#USER_SIMPLSHARP_LIBRARY "EasyMode Scheduler"
+
+//=====// I/O //=====//
+
+DIGITAL_INPUT _SKIP_,
+			  _SKIP_,
+			  _SKIP_,
+			  Enable,
+			  Disable,
+			  EnableDisable,
+			  _SKIP_,
+			  Minutes_Up,
+			  Minutes_Down,
+			  Hours_Up,
+			  Hours_Down;
+
+DIGITAL_OUTPUT _SKIP_,
+			   _SKIP_,
+			   _SKIP_,
+			   Enabled_Fb,
+			   _SKIP_,
+			   Event_Due;
+
+STRING_OUTPUT Event_Time;
+
+STRING_PARAMETER ID[16];
+
+INTEGER_PARAMETER TimeFormat,
+				  MinutesInterval;
+
+#BEGIN_PARAMETER_PROPERTIES TimeFormat
+	PROPDEFAULTVALUE = 1d;
+	PROPLIST         = { 1d ,"12-Hour" }, { 2d, "24-Hour" }; 
+#END_PARAMETER_PROPERTIES
+
+#BEGIN_PARAMETER_PROPERTIES MinutesInterval
+	PROPDEFAULTVALUE = 15d;
+	PROPLIST         = { 1d ,"1 Minute" }, { 5d ,"5 Minutes" }, { 10d ,"10 Minutes" }, { 15d, "15 Minutes" }, { 30d ,"30 Minutes" }; 
+#END_PARAMETER_PROPERTIES
+
+//=====// VARIABLES //=====//
+
+Schedule sch;
+
+//=====// FUNCTIONS //=====//
+
+STRING_FUNCTION DisplayTime12Hour(INTEGER _time) {
+
+	INTEGER hours;
+	INTEGER minutes;
+	STRING  AMPM[2];
+	STRING  result[12];
+
+	hours   = _time /   60;
+	minutes = _time mod 60;
+    
+	AMPM = "AM";
+	IF(hours >= 12) {
+		AMPM = "PM";
+		
+		IF(hours > 12)
+			hours = hours - 12;
+	}
+
+	MAKESTRING(result, "%u:%02u %s", hours, minutes, AMPM);
+	
+	RETURN(result);
+
+}
+
+STRING_FUNCTION DisplayTime24Hour(INTEGER _time) {
+
+	INTEGER hours;
+	INTEGER minutes;
+	STRING  result[12];
+
+	hours   = _time /   60;
+	minutes = _time mod 60;
+
+	MAKESTRING(result, "%u:%02u", hours, minutes);
+	
+	RETURN(result);
+
+}
+
+CALLBACK FUNCTION reportTimeEventHandler(INTEGER _time) {
+
+	IF(TimeFormat = 1) {
+        Event_Time = DisplayTime12Hour(_time);
+	} ELSE {
+    	Event_Time = DisplayTime24Hour(_time);
+	}
+
+}
+
+CALLBACK FUNCTION reportEnabledEventHandler(INTEGER _val) {
+
+	Enabled_Fb = _val;
+
+}
+
+CALLBACK FUNCTION scheduleCreatedEventHandler() {
+ 
+	sch.RequestState();
+
+}
+
+CALLBACK FUNCTION scheduleDueEventHandler() {
+
+	PULSE(50, Event_Due);
+
+}
+
+CALLBACK SIMPLSHARPSTRING_FUNCTION GetScheduleIDHandler() {
+
+	RETURN (ID);
+
+}
+
+//=====// EVENTS //=====//
+
+PUSH Enable        { sch.EnableDisableSchedule(1); }
+PUSH Disable       { sch.EnableDisableSchedule(0); }
+PUSH EnableDisable { sch.EnableDisableSchedule(2); }
+
+PUSH Minutes_Up   { sch.ModifySchedule(MinutesInterval); }
+PUSH Minutes_Down { sch.ModifySchedule(MinutesInterval * -1); }
+PUSH Hours_Up     { sch.ModifySchedule(60); }
+PUSH Hours_Down   { sch.ModifySchedule(-60); }
+
+//=====// MAIN //=====//
+
+FUNCTION Main () {
+
+	WAITFORINITIALIZATIONCOMPLETE();
+
+	REGISTERDELEGATE(sch, reportTimeEvent, reportTimeEventHandler);
+	REGISTERDELEGATE(sch, reportEnabledEvent, reportEnabledEventHandler);
+	REGISTERDELEGATE(sch, scheduleCreatedEvent, scheduleCreatedEventHandler);
+	REGISTERDELEGATE(sch, scheduleDueEvent, scheduleDueEventHandler);
+	REGISTERDELEGATE(sch, getScheduleID, getScheduleIDHandler);
+
+	Scheduler.createSchedule(sch);
+
+}
+
