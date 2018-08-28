@@ -38,8 +38,7 @@ namespace EasyMode {
             fStream = new FileStream(_fpath, FileMode.Create);
             fStream.BeginWrite(bytes, 0, numBytes, BeginWriteCallback, null);
 
-            if(Scheduler._DebugEnabled)
-                CrestronConsole.PrintLine(String.Format("[DEBUG] Beginning write of {0} bytes to file {1}...", numBytes, _fpath));
+            Scheduler.DebugMessage(String.Format("[DEBUG] Beginning write of {0} bytes to file {1}...", numBytes, _fpath));
 
         }
 
@@ -73,10 +72,10 @@ namespace EasyMode {
             sReader = new StreamReader(fStream);
             result.Append(sReader.ReadToEnd());
 
-            _callback(result.ToString());
-
             sReader.Close();
             fStream.Close();
+
+            _callback(result.ToString());
 
         }
 
@@ -101,8 +100,7 @@ namespace EasyMode {
             if (_res.IsCompleted) {
                 fStream.EndWrite(_res);
                 fStream.Close();
-                if (Scheduler._DebugEnabled)
-                    CrestronConsole.PrintLine(String.Format("[DEBUG] Completed File Write Operation!"));
+                Scheduler.DebugMessage(String.Format("[DEBUG] Completed File Write Operation!"));
             }
 
         }

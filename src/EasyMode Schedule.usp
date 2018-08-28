@@ -33,7 +33,7 @@ DIGITAL_OUTPUT _SKIP_,
 
 STRING_OUTPUT Event_Time;
 
-STRING_PARAMETER ID[16];
+STRING_PARAMETER ID[32];
 
 INTEGER_PARAMETER TimeFormat,
 				  MinutesInterval;
@@ -150,7 +150,9 @@ FUNCTION Main () {
 	REGISTERDELEGATE(sch, scheduleDueEvent, scheduleDueEventHandler);
 	REGISTERDELEGATE(sch, getScheduleID, getScheduleIDHandler);
 
-	Scheduler.createSchedule(sch);
+	DELAY(100);
+
+	Scheduler.createSchedule(sch, ID);
 
 }
 

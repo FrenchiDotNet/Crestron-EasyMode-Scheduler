@@ -39,9 +39,9 @@ FUNCTION Main () {
 
 	WAITFORINITIALIZATIONCOMPLETE();
 
+	Scheduler.DebugEnabled = EnableDebug;
 	Scheduler.setTickTime(30000);
 	Scheduler.setFilePath(FilePath);
-	Scheduler.DebugEnabled = EnableDebug;
 
 }
 

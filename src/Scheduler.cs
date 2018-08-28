@@ -40,6 +40,17 @@ namespace EasyMode {
         //===================// Methods //===================//
 
         //-------------------------------------//
+        //      Method | DebugMessage
+        // Description | Adds timestamp to outgoing console messages.
+        //-------------------------------------//
+        public static void DebugMessage(string _message) {
+
+            if (Scheduler._DebugEnabled)
+                CrestronConsole.PrintLine("[{0}] {1}", DateTime.Now.ToString("HH:mm:ss"), _message);
+
+        }
+
+        //-------------------------------------//
         //      Method | setFilePath
         // Description | ...
         //-------------------------------------//
@@ -64,12 +75,15 @@ namespace EasyMode {
         //      Method | createSchedule
         // Description | ...
         //-------------------------------------//
-        public static void createSchedule(Schedule _sch) {
+        public static void createSchedule(Schedule _sch, string _id) {
 
-            if (Scheduler._DebugEnabled)
-                CrestronConsole.PrintLine("[DEBUG] CreateSchedule called for new id [{0}]", _sch.getScheduleID().ToString());
+            DebugMessage(String.Format("[DEBUG] CreateSchedule called for new id [{0}]", _id));
+
+            _sch.values = new ScheduleValues();
+            _sch.values.id = _id;
 
             schedules.Add(_sch);
+
             if (!ioInUse)
                 newScheduleFileCheck(_sch);
 
@@ -77,7 +91,7 @@ namespace EasyMode {
 
         private static void newScheduleFileCheck(Schedule _sch) {
 
-            string id    = _sch.getScheduleID().ToString();
+            string id    = _sch.values.id;
             string fPath = SavePath + id + ".txt";
 
             // Check for saved timer details
@@ -86,33 +100,31 @@ namespace EasyMode {
 
             if (FileManager.FileExists(fPath)) {
 
-                if (Scheduler._DebugEnabled)
-                    CrestronConsole.PrintLine("[DEBUG] Schedule [{0}] exists, loading from file.", id);
+                DebugMessage(String.Format("[DEBUG] Schedule [{0}] exists, loading from file.", id));
 
                 FileManager.ReadFromFile((_str) => {
-                    _sch.values = JsonConvert.DeserializeObject<ScheduleValues>(_str);
+
+                    ScheduleValues vtmp;
+
+                    vtmp = JsonConvert.DeserializeObject<ScheduleValues>(_str);
+
+                    _sch.values.dueTime = vtmp.dueTime;
+                    _sch.values.enabled = vtmp.enabled;
+
                     if (_sch.scheduleCreatedEvent != null)
                         _sch.scheduleCreatedEvent();
 
                     // Asynchronous event, ready to call next schedule.
                     ioInUse = false;
                     _sch.initialized = true;
-
-                    int cnt = schedules.Count();
-                    for (int i = 0; i < cnt; i++)
-                        if (!schedules[i].initialized)
-                            newScheduleFileCheck(schedules[i]);
+                    InitializeNextSchedule(id);
 
                 }, fPath);
 
             } else {
 
-                if (Scheduler._DebugEnabled)
-                    CrestronConsole.PrintLine("[DEBUG] No Schedule [{0}] exists, creating a new one.", id);
+                DebugMessage(String.Format("[DEBUG] No Schedule [{0}] exists, creating a new one.", id));
 
-                _sch.values = new ScheduleValues();
-
-                _sch.values.id = id;
                 _sch.values.dueTime = 0;
                 _sch.values.enabled = false;
 
@@ -122,14 +134,30 @@ namespace EasyMode {
                     _sch.scheduleCreatedEvent();
 
                 // Synchronous event, just call the next schedule
-                ioInUse = false;
+                ioInUse          = false;
                 _sch.initialized = true;
+                InitializeNextSchedule(id);
 
-                int cnt = schedules.Count();
-                for (int i = 0; i < cnt; i++)
-                    if (!schedules[i].initialized)
-                        newScheduleFileCheck(schedules[i]);
+            }
 
+        }
+
+        //-------------------------------------//
+        //      Method | InitializeNextSchedule
+        // Description | ...
+        //-------------------------------------//
+
+        private static void InitializeNextSchedule(string _id) {
+
+            int cnt = schedules.Count();
+
+            DebugMessage(String.Format("[DEBUG] Schedule [{0}] initialized. Waiting for additional schedules...", _id));
+
+            for (int i = 0; i < cnt; i++) {
+                if (!schedules[i].initialized) {
+                    newScheduleFileCheck(schedules[i]);
+                    break;
+                }
             }
 
         }
@@ -142,8 +170,7 @@ namespace EasyMode {
 
             sTimer = new CTimer(Tick, null, tickTime, tickTime);
 
-            if (Scheduler._DebugEnabled)
-                CrestronConsole.PrintLine("[DEBUG] EasyMode Scheduler started.");
+            DebugMessage("[DEBUG] EasyMode Scheduler started.");
 
         }
 
@@ -168,8 +195,7 @@ namespace EasyMode {
             int cnt = schedules.Count;
             double mins = Math.Floor(DateTime.Now.TimeOfDay.TotalMinutes);
 
-            if (Scheduler._DebugEnabled)
-                CrestronConsole.PrintLine("[DEBUG] Tick! Total Minutes: {0}", mins);
+            DebugMessage(String.Format("[DEBUG] Tick! Total Minutes: {0}", mins));
 
             for (int i = 0; i < cnt; i++) {
                 if (schedules[i].values.enabled && schedules[i].values.dueTime == mins)
@@ -267,8 +293,7 @@ namespace EasyMode {
         //-------------------------------------//
         private void modTimeoutExpired(object _o) {
 
-            if (Scheduler._DebugEnabled)
-                CrestronConsole.PrintLine("[DEBUG] Modification timeout reached for schedule [{0}]", this.values.id);
+            Scheduler.DebugMessage(String.Format("[DEBUG] Modification timeout reached for schedule [{0}]", this.values.id));
 
             SaveSchedule();
             timeoutActive = false;
@@ -296,8 +321,7 @@ namespace EasyMode {
                 CrestronConsole.PrintLine("[ERROR] Encountered error on saving Schedule [{0}]: {1}", this.values.id, e.Message);
             }
 
-            if (Scheduler._DebugEnabled)
-                CrestronConsole.PrintLine(String.Format("[DEBUG] Saving Schedule [{0}] with dueTime {1}", values.id, values.dueTime));
+            Scheduler.DebugMessage(String.Format("[DEBUG] Saving Schedule [{0}] with dueTime {1}", values.id, values.dueTime));
 
         }
 
